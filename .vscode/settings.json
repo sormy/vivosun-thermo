@@ -1,0 +1,19 @@
+{
+    "[python]": {
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "always"
+        },
+        "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "[markdown][json][jsonc]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "editor.rulers": [100],
+    "python.languageServer": "Pylance",
+    "python.analysis.typeCheckingMode": "standard",
+    "python.testing.pytestEnabled": true,
+    "python.testing.pytestArgs": ["--no-cov"],
+    "flake8.args": ["--max-line-length", "100"]
+}
