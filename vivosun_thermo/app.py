@@ -5,6 +5,8 @@ from typing import Literal, NamedTuple
 from vivosun_thermo.client import (
     PROBE_EXTERNAL,
     PROBE_MAIN,
+    UNIT_CELSIUS,
+    UNIT_FAHRENHEIT,
     ProbeType,
     TempUnit,
     VivosunThermoClient,
@@ -12,19 +14,24 @@ from vivosun_thermo.client import (
 from vivosun_thermo.format import format_humidity, format_temperature, format_vpd
 from vivosun_thermo.scanner import VivosunThermoScanner
 
+FORMAT_TEXT = "text"
+FORMAT_JSON = "json"
 
-class ListCommandArgs(NamedTuple):
+
+class GlobalCommandArgs(NamedTuple):
     adapter: str | None
-    scan_timeout: int
-
-
-class StatusCommandArgs(NamedTuple):
-    adapter: str | None
-    connect_timeout: int
-    read_timeout: int
-    address: str
-    unit: Literal["c", "f"]
     format: Literal["text", "json"]
+
+
+class ListCommandArgs(GlobalCommandArgs):
+    scan_timeout: float
+
+
+class StatusCommandArgs(GlobalCommandArgs):
+    connect_timeout: float
+    read_timeout: float
+    address: str
+    unit: TempUnit
 
 
 class VivosunThermoApp:
@@ -38,6 +45,13 @@ class VivosunThermoApp:
         parser.add_argument(
             "--adapter",
             help="bluetooth adapter name (hci0 on Linux)",
+        )
+        parser.add_argument(
+            "-f",
+            "--format",
+            choices=(FORMAT_TEXT, FORMAT_JSON),
+            help="output format",
+            default=FORMAT_TEXT,
         )
 
         subparsers = parser.add_subparsers(required=True, help="sub-command help")
@@ -53,7 +67,7 @@ class VivosunThermoApp:
             help="scan timeout",
             default=30,
         )
-        parser_list.set_defaults(func=self.list)
+        parser_list.set_defaults(func=self.cmd_list)
 
         parser_status = subparsers.add_parser(
             "status",
@@ -63,16 +77,9 @@ class VivosunThermoApp:
         parser_status.add_argument(
             "-u",
             "--unit",
-            choices=("c", "f"),
+            choices=(UNIT_CELSIUS, UNIT_FAHRENHEIT),
             help="temperature unit",
-            default="c",
-        )
-        parser_status.add_argument(
-            "-f",
-            "--format",
-            choices=("text", "json"),
-            help="output format",
-            default="text",
+            default=UNIT_CELSIUS,
         )
         parser_status.add_argument(
             "--connect-timeout",
@@ -90,27 +97,38 @@ class VivosunThermoApp:
             "address",
             help="device address",
         )
-        parser_status.set_defaults(func=self.status)
+        parser_status.set_defaults(func=self.cmd_status)
 
         args = parser.parse_args(argv[1:])
 
         await args.func(args)
 
-    async def list(self, args: ListCommandArgs):
+    async def cmd_list(self, args: ListCommandArgs):
+        if args.format == FORMAT_JSON:
+            result = [
+                ({"address": dev.address, "name": dev.name})
+                async for dev in self._list_devices(args)
+            ]
+            self._print_json(result)
+        else:
+            async for dev in self._list_devices(args):
+                print(f"{dev.address} {dev.name}")
+
+    async def _list_devices(self, args: ListCommandArgs):
         for dev in await VivosunThermoScanner.discover(
             timeout=args.scan_timeout,
             adapter=args.adapter,
         ):
-            print(f"{dev.address}\t{dev.name}")
+            yield dev
 
-    async def status(self, args: StatusCommandArgs):
+    async def cmd_status(self, args: StatusCommandArgs):
         async with VivosunThermoClient(
             args.address,
             adapter=args.adapter,
             connect_timeout=args.connect_timeout,
             read_timeout=args.read_timeout,
         ) as client:
-            if args.format == "json":
+            if args.format == FORMAT_JSON:
                 await self._print_status_json(client, args.unit)
             else:
                 await self._print_status_text(client, args.unit)
@@ -122,7 +140,7 @@ class VivosunThermoApp:
             "main_sensor": main_sensor,
             **({"external_sensor": external_sensor} if external_sensor is not None else {}),
         }
-        print(json.dumps(result, indent=4))
+        self._print_json(result)
 
     async def _get_probe_obj(self, client: VivosunThermoClient, probe: ProbeType, unit: TempUnit):
         if probe == PROBE_EXTERNAL and not await client.has_external_probe():
@@ -150,3 +168,6 @@ class VivosunThermoApp:
         print(f"  Temperature: {format_temperature(temp, unit)}")
         print(f"  Humidity: {format_humidity(humidity)}")
         print(f"  VPD: {format_vpd(vpd)}")
+
+    def _print_json(self, obj: object):
+        print(json.dumps(obj, indent=4))
