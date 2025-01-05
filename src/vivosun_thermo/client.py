@@ -3,13 +3,12 @@ import struct
 from typing import Literal
 
 from bleak import BleakClient
-from bleak.backends.characteristic import BleakGATTCharacteristic
 from bleak.backends.device import BLEDevice
 
 from vivosun_thermo.conversion import calculate_vpd, celsius_to_fahrenheit
 
-UUID_COMMAND = "0000fff5-0000-1000-8000-00805f9b34fb"
-UUID_STATUS = "0000fff3-0000-1000-8000-00805f9b34fb"
+CHAR_COMMAND = "0000fff5-0000-1000-8000-00805f9b34fb"
+CHAR_STATUS = "0000fff3-0000-1000-8000-00805f9b34fb"
 
 COMMAND_0D = bytearray([0x0D])
 
@@ -98,12 +97,8 @@ class VivosunThermoClient:
 
     async def _read_value(self, command: bytearray) -> bytearray:
         future = asyncio.get_event_loop().create_future()
-
-        def callback(char: BleakGATTCharacteristic, data: bytearray) -> None:
-            future.set_result(data)
-
-        await self._client.start_notify(UUID_STATUS, callback)
-        await self._client.write_gatt_char(UUID_COMMAND, command)
+        await self._client.start_notify(CHAR_STATUS, lambda char, data: future.set_result(data))
+        await self._client.write_gatt_char(CHAR_COMMAND, command)
         result = await asyncio.wait_for(future, self.read_timeout)
-        await self._client.stop_notify(UUID_STATUS)
+        await self._client.stop_notify(CHAR_STATUS)
         return result

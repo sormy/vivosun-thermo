@@ -20,14 +20,16 @@ MIT License.
 
 -   **VS-THB1S**: VIVOSUN AeroLab Hygrometer Thermometer
 
-## Installation
+## CLI Usage
+
+### Installation
 
 ```sh
+# see details for your OS: https://github.com/pypa/pipx
 brew install pipx
+# install as CLI
 pipx install vivosun_thermo
 ```
-
-## CLI Usage
 
 ### Scan for Nearby Devices
 
