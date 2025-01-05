@@ -65,6 +65,23 @@ Options:
 
 NOTE: Enable pairing mode on device for initial connection.
 
+### Example
+
+```
+% vivosun-thermo list
+5648A2C2-E0A3-6E85-000C-30D6C1C1FBCD ThermoBeacon2
+
+% vivosun-thermo status 5648A2C2-E0A3-6E85-000C-30D6C1C1FBCD
+Main Sensor:
+  Temperature: 20.6°C
+  Humidity: 36%
+  VPD: 1.55 kPa
+
+External Sensor:
+  Temperature: 20.2°C
+  Humidity: 38%
+```
+
 ## Python API Usage
 
 Example:
