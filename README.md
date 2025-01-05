@@ -80,6 +80,7 @@ Main Sensor:
 External Sensor:
   Temperature: 20.2°C
   Humidity: 38%
+  VPD: 1.48 kPa
 ```
 
 ## Python API Usage
